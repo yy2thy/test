@@ -2488,7 +2488,14 @@ fb_cnt = 0
           password: pwdVal
         };
         studentProgress = res.progress || {};
-
+        currentStudent = {
+          classId: res.student.classId,
+          number: res.student.number,
+          key: res.student.key,
+          password: pwdVal,
+          summary: res.summary || null
+        };
+        studentProgress = res.progress || {};
         document.getElementById('loginReminderBanner').classList.add('hidden');
         const statsBox = document.getElementById('studentStatsBox');
         statsBox.classList.remove('hidden');
@@ -2512,13 +2519,21 @@ fb_cnt = 0
       if (!currentStudent) return;
       let solved = 0;
       let attempts = 0;
-      ALL_PROBLEMS.forEach((p) => {
-        const rec = studentProgress[p.id];
-        if (rec) {
-          if (rec.solved && !rec.skipped) solved++;
-          attempts += (rec.attempts || 0);
-        }
-      });
+      const hasProgressRecords = Object.keys(studentProgress).length > 0;
+
+      if (hasProgressRecords) {
+        ALL_PROBLEMS.forEach((p) => {
+          const rec = studentProgress[p.id];
+          if (rec) {
+            if (rec.solved && !rec.skipped) solved++;
+            attempts += (rec.attempts || 0);
+          }
+        });
+      } else if (currentStudent.summary) {
+        solved = currentStudent.summary.solvedCount || 0;
+        attempts = currentStudent.summary.totalAttempts || 0;
+      }
+
       const rate = Math.round((solved / ALL_PROBLEMS.length) * 100);
       document.getElementById('statSolved').textContent = `${solved}/${ALL_PROBLEMS.length}`;
       document.getElementById('statAttempts').textContent = `${attempts} 次`;
