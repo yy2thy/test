@@ -496,9 +496,6 @@
     // 2. 完整 69 題題庫定義（所有 sampleSolution 已移至雲端隱藏工作表，前端絕不儲存答案）
     // =========================================================================
     const UNITS = [
-      // -----------------------------------------------------------------------
-      // 單元 1：第2課 — 變數、輸出與算術運算 (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u1",
         lesson: "第2課：變數、輸出與算術運算",
@@ -713,10 +710,6 @@ h = int(input())
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 2：第2課 — 條件判斷 if / elif / else (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u2",
         lesson: "第2課：條件判斷 if / elif / else",
@@ -962,10 +955,6 @@ h = int(input())
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 3：第2課 — 邏輯運算符 and / or 改寫 (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u3",
         lesson: "第2課：邏輯運算符 and / or 改寫",
@@ -1174,10 +1163,6 @@ vip = input()
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 4：第3課 — While 循環基礎計數與累積 (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u4",
         lesson: "第3課：While 循環基礎計數與累積",
@@ -1374,10 +1359,6 @@ step = int(input())
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 5：第3課 — While 循環有效性檢驗 (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u5",
         lesson: "第3課：While 循環有效性檢驗 (Validation)",
@@ -1596,10 +1577,6 @@ step = int(input())
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 6：第4課 — For 循環區間求和 (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u6",
         lesson: "第4課：For 循環區間求和",
@@ -1798,10 +1775,6 @@ total = 0
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 7：第4課 — For 循環步長與數列輸出 (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u7",
         lesson: "第4課：For 循環步長與數列輸出",
@@ -1990,10 +1963,6 @@ n = int(input())
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 8：第4課 — For 循環結合條件判斷 (8 題)
-      // -----------------------------------------------------------------------
       {
         unitId: "u8",
         lesson: "第4課：For 循環結合條件判斷",
@@ -2208,10 +2177,6 @@ found = 0
           }
         ]
       },
-
-      // -----------------------------------------------------------------------
-      // 單元 9：綜合性挑戰題（跨單元實戰應用，5 題）
-      // -----------------------------------------------------------------------
       {
         unitId: "u9",
         lesson: "第9單元：綜合性挑戰題",
@@ -2401,7 +2366,7 @@ fb_cnt = 0
     let pyodideInstance = null;
     let pyodideReady = false;
 
-    // 登入狀態：{ classId: '3A', number: 1, key: '3A-01', password: '...' }
+    // 登入狀態：{ classId: '3A', number: 1, key: '3A-01', password: '...', summary: {...} }
     let currentStudent = null;
     // Map of problemId -> { solved: boolean, skipped: boolean, attempts: number, code: string, sampleSolution: string | null }
     let studentProgress = {};
@@ -2480,22 +2445,16 @@ fb_cnt = 0
           return;
         }
 
-        // 登入成功，建立當前會話並載入該生雲端進度
-        currentStudent = {
-          classId: res.student.classId,
-          number: res.student.number,
-          key: res.student.key,
-          password: pwdVal
-        };
-        studentProgress = res.progress || {};
+        // 登入成功，同時保存總表摘要 (summary) 與逐題明細 (progress)
         currentStudent = {
           classId: res.student.classId,
           number: res.student.number,
           key: res.student.key,
           password: pwdVal,
-          summary: res.summary || null
+          summary: res.summary || { solvedCount: 0, skippedCount: 0, totalAttempts: 0 }
         };
         studentProgress = res.progress || {};
+
         document.getElementById('loginReminderBanner').classList.add('hidden');
         const statsBox = document.getElementById('studentStatsBox');
         statsBox.classList.remove('hidden');
@@ -2529,9 +2488,12 @@ fb_cnt = 0
             attempts += (rec.attempts || 0);
           }
         });
-      } else if (currentStudent.summary) {
-        solved = currentStudent.summary.solvedCount || 0;
-        attempts = currentStudent.summary.totalAttempts || 0;
+      }
+
+      // 若總表摘要數字高於目前讀取到的明細（例如手動修改過 Students 總表），以總表摘要為準
+      if (currentStudent.summary) {
+        solved = Math.max(solved, Number(currentStudent.summary.solvedCount) || 0);
+        attempts = Math.max(attempts, Number(currentStudent.summary.totalAttempts) || 0);
       }
 
       const rate = Math.round((solved / ALL_PROBLEMS.length) * 100);
@@ -2684,7 +2646,6 @@ fb_cnt = 0
       if (rec.skipped && rec.sampleSolution) {
         statusBadge.className = "text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-300";
         statusBadge.innerHTML = '<i class="fa-solid fa-forward mr-1"></i>Skip（不計入完成）';
-        // 僅當後端回傳了該題標準解答時才顯示
         document.getElementById('revealedAnswerCode').textContent = rec.sampleSolution;
         answerCard.classList.remove('hidden');
       } else if (rec.solved) {
@@ -3127,6 +3088,9 @@ finally:
             code: userCode,
             sampleSolution: pState.sampleSolution || null
           };
+          if (syncRes.summary) {
+            currentStudent.summary = syncRes.summary;
+          }
 
           if (allPassed) {
             if (pState.skipped) {
@@ -3197,7 +3161,6 @@ finally:
         purgeLegacyBrowserCache();
         const res = await callBackendAPI({ action: "getLeaderboard" });
         if (res.success && Array.isArray(res.leaderboard)) {
-          // 以 studentKey 進行去重，確保絕不會出現重複學生列
           const uniqueMap = new Map();
           res.leaderboard.forEach((item) => {
             uniqueMap.set(item.studentKey, item);
@@ -3239,7 +3202,6 @@ finally:
       if (leaderboardClassFilter !== 'ALL') {
         list = list.filter(item => item.classId === leaderboardClassFilter);
       }
-      // 排序：1. 已完成題數由高至低；2. 總嘗試次數由少至多；3. 班別；4. 學號
       list.sort((a, b) => {
         if (b.solvedCount !== a.solvedCount) return b.solvedCount - a.solvedCount;
         if (a.totalAttempts !== b.totalAttempts) return a.totalAttempts - b.totalAttempts;
@@ -3354,6 +3316,9 @@ finally:
         }
         cloudLeaderboardList = [];
         studentProgress = {};
+        if (currentStudent) {
+          currentStudent.summary = { solvedCount: 0, skippedCount: 0, totalAttempts: 0 };
+        }
         updateStudentStatsUI();
         renderSidebar();
         loadProblem(currentProblemIndex);
