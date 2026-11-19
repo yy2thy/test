@@ -415,14 +415,6 @@
             <i class="fa-solid fa-arrows-rotate"></i>
             <span>重新整理</span>
           </button>
-          <button onclick="executeExportLeaderboardCSV()" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white flex items-center gap-1.5 transition shadow-sm">
-            <i class="fa-solid fa-file-csv"></i>
-            <span>匯出成績 CSV</span>
-          </button>
-          <button onclick="executeClearAllRecords()" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 transition shadow-sm">
-            <i class="fa-solid fa-trash-can"></i>
-            <span>清除紀錄</span>
-          </button>
         </div>
       </div>
 
@@ -3268,66 +3260,7 @@ finally:
       }).join('');
     }
 
-    window.executeExportLeaderboardCSV = function () {
-      const list = getSortedLeaderboardList();
-      if (list.length === 0) {
-        showToast("目前沒有可匯出的成績資料", "warning");
-        return;
-      }
-      const headers = [
-        "名次",
-        "班別",
-        "學號",
-        "已完成題數",
-        "Skip題數",
-        "總題數",
-        "總嘗試次數",
-        "最近更新時間"
-      ];
-      const rows = list.map((st, idx) => [
-        idx + 1,
-        st.classId,
-        st.number,
-        st.solvedCount,
-        st.skippedCount || 0,
-        ALL_PROBLEMS.length,
-        st.totalAttempts,
-        st.updatedAt || '-'
-      ]);
-
-      const csvContent = "\uFEFF" + [headers, ...rows].map(r => r.join(",")).join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `中三Python雲端成績排行榜_${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("已成功匯出 CSV 成績表！", "success");
-    };
-
-    window.executeClearAllRecords = async function () {
-      try {
-        purgeLegacyBrowserCache();
-        const res = await callBackendAPI({ action: "clearAllRecords" });
-        if (!res.success) {
-          showToast(res.message || "清除雲端紀錄失敗", "error");
-          return;
-        }
-        cloudLeaderboardList = [];
-        studentProgress = {};
-        if (currentStudent) {
-          currentStudent.summary = { solvedCount: 0, skippedCount: 0, totalAttempts: 0 };
-        }
-        updateStudentStatsUI();
-        renderSidebar();
-        loadProblem(currentProblemIndex);
-        renderLeaderboardTable();
-        showToast("已清除雲端與本機所有作答進度與排行榜紀錄！", "success");
-      } catch (err) {
-        showToast("清除紀錄時發生錯誤：" + err.message, "error");
-      }
-    };
+    
 
     // =========================================================================
     // 10. Toast 提示通知輔助函數
